@@ -1,6 +1,7 @@
 package com.thoughtworks.rslist.api;
 
 import com.thoughtworks.rslist.domain.RsEvent;
+import com.thoughtworks.rslist.domain.Trade;
 import com.thoughtworks.rslist.domain.Vote;
 import com.thoughtworks.rslist.dto.RsEventDto;
 import com.thoughtworks.rslist.dto.UserDto;
@@ -93,6 +94,13 @@ public class RsController {
     rsService.vote(vote, id);
     return ResponseEntity.ok().build();
   }
+
+  @PostMapping("/rs/buy/{id}")
+  public ResponseEntity buy(@PathVariable int id, @RequestBody Trade trade){
+    rsService.buy(trade, id);
+    return ResponseEntity.ok().build();
+  }
+
 
   @ExceptionHandler(RequestNotValidException.class)
   public ResponseEntity<Error> handleRequestErrorHandler(RequestNotValidException e) {

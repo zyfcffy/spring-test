@@ -1,5 +1,6 @@
 package com.thoughtworks.rslist.service;
 
+import com.thoughtworks.rslist.domain.Trade;
 import com.thoughtworks.rslist.domain.Vote;
 import com.thoughtworks.rslist.dto.RsEventDto;
 import com.thoughtworks.rslist.dto.UserDto;
@@ -46,5 +47,9 @@ public class RsService {
     RsEventDto rsEvent = rsEventDto.get();
     rsEvent.setVoteNum(rsEvent.getVoteNum() + vote.getVoteNum());
     rsEventRepository.save(rsEvent);
+  }
+
+  public void buy(Trade trade, int id) {
+
   }
 }
