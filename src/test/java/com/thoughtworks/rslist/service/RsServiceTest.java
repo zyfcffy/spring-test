@@ -120,8 +120,6 @@ class RsServiceTest {
                 .amount(trade.getAmount())
                 .rankPoint(trade.getRank())
                 .rsEventId(rsEventDto.getId()).build());
-        rsEventDto.setRank(trade.getRank());
-        rsEventDto.setIsTraded(1);
         verify(rsEventRepository).save(rsEventDto);
     }
 
@@ -142,5 +140,17 @@ class RsServiceTest {
         verify(tradeRecordRepository).save(tradeRecordDto);
         verify(rankRepository).save(rankDto);
         verify(rsEventRepository).save(rsEventDto);
+    }
+
+    @Test
+    public void shouldThrowExceptionWhenTradeAmountIsNotEnough() throws Exception{
+        RsEventDto rsEventDto =
+                RsEventDto.builder().keyword("无分类").eventName("第一条事件").build();
+        Trade trade = new Trade(1, 1);
+        int rsEventId = 6;
+        RankDto rankDto = RankDto.builder().rankPoint(1).amount(3).rsEventId(1).build();
+        when(rsEventRepository.findById(anyInt())).thenReturn(Optional.of(rsEventDto));
+        when(rankRepository.findByRankPoint(anyInt())).thenReturn(Optional.of(rankDto));
+        assertThrows(Exception.class, () -> { rsService.buy(trade, rsEventId);});
     }
 }
