@@ -12,70 +12,87 @@ import java.util.Optional;
 
 @Service
 public class RsService {
-  final RsEventRepository rsEventRepository;
-  final UserRepository userRepository;
-  final VoteRepository voteRepository;
-  final TradeRecordRepository tradeRecordRepository;
-  final RankRepository rankRepository;
+    final RsEventRepository rsEventRepository;
+    final UserRepository userRepository;
+    final VoteRepository voteRepository;
+    final TradeRecordRepository tradeRecordRepository;
+    final RankRepository rankRepository;
 
-  public RsService(RsEventRepository rsEventRepository,
-                   UserRepository userRepository,
-                   VoteRepository voteRepository,
-                   TradeRecordRepository tradeRecordRepository,
-                   RankRepository rankRepository) {
-    this.rsEventRepository = rsEventRepository;
-    this.userRepository = userRepository;
-    this.voteRepository = voteRepository;
-    this.tradeRecordRepository = tradeRecordRepository;
-    this.rankRepository = rankRepository;
-  }
+    public RsService(RsEventRepository rsEventRepository,
+                     UserRepository userRepository,
+                     VoteRepository voteRepository,
+                     TradeRecordRepository tradeRecordRepository,
+                     RankRepository rankRepository) {
+        this.rsEventRepository = rsEventRepository;
+        this.userRepository = userRepository;
+        this.voteRepository = voteRepository;
+        this.tradeRecordRepository = tradeRecordRepository;
+        this.rankRepository = rankRepository;
+    }
 
-  public void vote(Vote vote, int rsEventId) {
-    Optional<RsEventDto> rsEventDto = rsEventRepository.findById(rsEventId);
-    Optional<UserDto> userDto = userRepository.findById(vote.getUserId());
-    if (!rsEventDto.isPresent()
-        || !userDto.isPresent()
-        || vote.getVoteNum() > userDto.get().getVoteNum()) {
-      throw new RuntimeException();
+    public void vote(Vote vote, int rsEventId) {
+        Optional<RsEventDto> rsEventDto = rsEventRepository.findById(rsEventId);
+        Optional<UserDto> userDto = userRepository.findById(vote.getUserId());
+        if (!rsEventDto.isPresent()
+                || !userDto.isPresent()
+                || vote.getVoteNum() > userDto.get().getVoteNum()) {
+            throw new RuntimeException();
+        }
+        VoteDto voteDto =
+                VoteDto.builder()
+                        .localDateTime(vote.getTime())
+                        .num(vote.getVoteNum())
+                        .rsEvent(rsEventDto.get())
+                        .user(userDto.get())
+                        .build();
+        voteRepository.save(voteDto);
+        UserDto user = userDto.get();
+        user.setVoteNum(user.getVoteNum() - vote.getVoteNum());
+        userRepository.save(user);
+        RsEventDto rsEvent = rsEventDto.get();
+        rsEvent.setVoteNum(rsEvent.getVoteNum() + vote.getVoteNum());
+        rsEventRepository.save(rsEvent);
     }
-    VoteDto voteDto =
-        VoteDto.builder()
-            .localDateTime(vote.getTime())
-            .num(vote.getVoteNum())
-            .rsEvent(rsEventDto.get())
-            .user(userDto.get())
-            .build();
-    voteRepository.save(voteDto);
-    UserDto user = userDto.get();
-    user.setVoteNum(user.getVoteNum() - vote.getVoteNum());
-    userRepository.save(user);
-    RsEventDto rsEvent = rsEventDto.get();
-    rsEvent.setVoteNum(rsEvent.getVoteNum() + vote.getVoteNum());
-    rsEventRepository.save(rsEvent);
-  }
 
-  @Transactional
-  public void buy(Trade trade, int rsEventId) throws Exception {
-    Optional<RsEventDto> rsEventDto = rsEventRepository.findById(rsEventId);
-    if(!rsEventDto.isPresent()){
-      throw new  Exception("rs event not exist");
+    @Transactional
+    public void buy(Trade trade, int rsEventId) throws Exception {
+        Optional<RsEventDto> rsEventDto = rsEventRepository.findById(rsEventId);
+        if (!rsEventDto.isPresent()) {
+            throw new Exception("rs event not exist");
+        }
+        int rankPoint = trade.getRank();
+        Optional<RankDto> rankDto = rankRepository.findByRankPoint(rankPoint);
+        if (!rankDto.isPresent()) {
+            RankDto newRankDto = RankDto.builder()
+                    .amount(trade.getAmount())
+                    .rankPoint(rankPoint)
+                    .rsEventId(rsEventId).build();
+            rankRepository.save(newRankDto);
+            TradeRecordDto tradeRecordDto = TradeRecordDto.builder()
+                    .amount(trade.getAmount())
+                    .rankPoint(rankPoint)
+                    .rsEventId(rsEventId).build();
+            tradeRecordRepository.save(tradeRecordDto);
+            RsEventDto rsEvent = rsEventDto.get();
+            rsEvent.setIsTraded(true);
+            rsEventRepository.save(rsEvent);
+        } else {
+            RankDto rank = rankDto.get();
+            int oldRsEventId = rank.getRsEventId();
+            if (trade.getAmount() > rank.getAmount()) {
+                TradeRecordDto tradeRecordDto = TradeRecordDto.builder()
+                        .amount(trade.getAmount())
+                        .rankPoint(rankPoint)
+                        .rsEventId(rsEventId).build();
+                tradeRecordRepository.save(tradeRecordDto);
+                rank.setAmount(trade.getAmount());
+                rank.setRsEventId(rsEventId);
+                rankRepository.save(rank);
+                RsEventDto rsEvent = rsEventDto.get();
+                rsEvent.setIsTraded(true);
+                rsEventRepository.save(rsEvent);
+                rsEventRepository.deleteById(oldRsEventId);
+            }
+        }
     }
-    int rankPoint = trade.getRank();
-    Optional<RankDto> rankDto = rankRepository.findByRankPoint(rankPoint);
-    if(!rankDto.isPresent()){
-      RankDto newRankDto =RankDto.builder()
-              .amount(trade.getAmount())
-              .rankPoint(rankPoint)
-              .rsEventId(rsEventId).build();
-      rankRepository.save(newRankDto);
-      TradeRecordDto tradeRecordDto =TradeRecordDto.builder()
-              .amount(trade.getAmount())
-              .rankPoint(rankPoint)
-              .rsEventId(rsEventId).build();
-      tradeRecordRepository.save(tradeRecordDto);
-      RsEventDto rsEvent = rsEventDto.get();
-      rsEvent.setIsTraded(true);
-      rsEventRepository.save(rsEvent);
-    }
-  }
 }

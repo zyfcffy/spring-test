@@ -20,5 +20,5 @@ public class RankDto {
     private Integer id;
     private  int rankPoint;
     private int amount;
-    private int rsEventId;
+    private Integer rsEventId;
 }

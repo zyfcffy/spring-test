@@ -2,13 +2,11 @@ package com.thoughtworks.rslist.api;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.thoughtworks.rslist.domain.Trade;
+import com.thoughtworks.rslist.dto.RankDto;
 import com.thoughtworks.rslist.dto.RsEventDto;
 import com.thoughtworks.rslist.dto.UserDto;
 import com.thoughtworks.rslist.dto.VoteDto;
-import com.thoughtworks.rslist.repository.RsEventRepository;
-import com.thoughtworks.rslist.repository.TradeRecordRepository;
-import com.thoughtworks.rslist.repository.UserRepository;
-import com.thoughtworks.rslist.repository.VoteRepository;
+import com.thoughtworks.rslist.repository.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -45,6 +43,8 @@ class RsControllerTest {
     VoteRepository voteRepository;
     @Autowired
     TradeRecordRepository tradeRecordRepository;
+    @Autowired
+    RankRepository rankRepository;
     private UserDto userDto;
 
     @BeforeEach
@@ -87,6 +87,33 @@ class RsControllerTest {
                 .content(new ObjectMapper().writeValueAsString(trade))
                 .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    public void shouldBuyRankSuccessWhenTradeAmountIsEnough() throws Exception {
+        UserDto save = userRepository.save(userDto);
+        RsEventDto rsEventDto1 =
+                RsEventDto.builder().keyword("无分类").eventName("第一条事件").user(save).build();
+        RsEventDto rsEventDto2 =
+                RsEventDto.builder().keyword("无分类").eventName("第二条事件").user(save).build();
+        RsEventDto rsEventDto3 =
+                RsEventDto.builder().keyword("无分类").eventName("第三条事件").user(save).build();
+        rsEventRepository.save(rsEventDto1);
+        rsEventRepository.save(rsEventDto2);
+        rsEventRepository.save(rsEventDto3);
+        RankDto rankDto = RankDto.builder().rankPoint(1).amount(2).rsEventId(rsEventDto1.getId()).build();
+        rankRepository.save(rankDto);
+        Trade trade = new Trade(3, 1);
+        mockMvc.perform(post("/rs/buy/{rsEventId}", rsEventDto2.getId())
+                .content(new ObjectMapper().writeValueAsString(trade))
+                .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk());
+        int rsEventSize = rsEventRepository.findAll().size();
+        int tradeRecordSize = tradeRecordRepository.findAll().size();
+        int amount = rankRepository.findByRankPoint(1).get().getAmount();
+        assertEquals(2, rsEventSize);
+        assertEquals(1, tradeRecordSize);
+        assertEquals(3, amount);
     }
 
     @Test
