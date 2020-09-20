@@ -1,5 +1,6 @@
 package com.thoughtworks.rslist.service;
 
+import com.thoughtworks.rslist.domain.RsEvent;
 import com.thoughtworks.rslist.domain.Trade;
 import com.thoughtworks.rslist.domain.Vote;
 import com.thoughtworks.rslist.dto.*;
@@ -8,7 +9,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Service
 public class RsService {
@@ -92,9 +96,27 @@ public class RsService {
                 rsEvent.setIsTraded(true);
                 rsEventRepository.save(rsEvent);
                 rsEventRepository.deleteById(oldRsEventId);
-            }else {
-                throw new  Exception("trade amount is not enough");
+            } else {
+                throw new Exception("trade amount is not enough");
             }
         }
+    }
+
+    public List<RsEvent> getRsEventList() {
+        List<RsEvent> rsEvents = new ArrayList<>();
+        List<RankDto> ranks = rankRepository.findAll();
+        if (ranks.size() == 0) {
+            rsEvents =rsEventRepository.findByOrderByVoteNumDesc().stream()
+                    .map(
+                            item ->
+                                    RsEvent.builder()
+                                            .eventName(item.getEventName())
+                                            .keyword(item.getKeyword())
+                                            .userId(item.getId())
+                                            .voteNum(item.getVoteNum())
+                                            .build())
+                    .collect(Collectors.toList());
+        }
+        return rsEvents;
     }
 }

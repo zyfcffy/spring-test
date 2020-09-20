@@ -139,21 +139,22 @@ class RsControllerTest {
     }
 
     @Test
-    public void shouldGetRsEventList() throws Exception {
+    public void shouldGetRsEventListWhenAllEventAreNotTraded() throws Exception {
         UserDto save = userRepository.save(userDto);
-
-        RsEventDto rsEventDto =
-                RsEventDto.builder().keyword("无分类").eventName("第一条事件").user(save).build();
-
-        rsEventRepository.save(rsEventDto);
-
-        mockMvc
-                .perform(get("/rs/list"))
-                .andExpect(jsonPath("$", hasSize(1)))
-                .andExpect(jsonPath("$[0].eventName", is("第一条事件")))
-                .andExpect(jsonPath("$[0].keyword", is("无分类")))
-                .andExpect(jsonPath("$[0]", not(hasKey("user"))))
-                .andExpect(status().isOk());
+        RsEventDto rsEventDto1 =
+                RsEventDto.builder().keyword("无分类").eventName("第一条事件").user(save).voteNum(1).build();
+        RsEventDto rsEventDto2 =
+                RsEventDto.builder().keyword("无分类").eventName("第二条事件").user(save).voteNum(2).build();
+        RsEventDto rsEventDto3 =
+                RsEventDto.builder().keyword("无分类").eventName("第三条事件").user(save).voteNum(3).build();
+        rsEventRepository.save(rsEventDto1);
+        rsEventRepository.save(rsEventDto2);
+        rsEventRepository.save(rsEventDto3);
+        mockMvc.perform(get("/rs/list"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].eventName",is("第三条事件")))
+                .andExpect(jsonPath("$[1].eventName",is("第二条事件")))
+                .andExpect(jsonPath("$[2].eventName",is("第一条事件")));
     }
 
     @Test
