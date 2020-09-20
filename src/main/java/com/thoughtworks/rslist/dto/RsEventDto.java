@@ -18,7 +18,8 @@ public class RsEventDto {
   private String eventName;
   private String keyword;
   private int voteNum;
-  private Boolean isTraded;
+  private int isTraded;
+  private int rank;
   @ManyToOne
   @JoinColumn(name = "user_id")
   private UserDto user;

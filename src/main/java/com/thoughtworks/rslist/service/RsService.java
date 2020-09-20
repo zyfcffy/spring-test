@@ -9,9 +9,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -78,7 +76,8 @@ public class RsService {
                     .rsEventId(rsEventId).build();
             tradeRecordRepository.save(tradeRecordDto);
             RsEventDto rsEvent = rsEventDto.get();
-            rsEvent.setIsTraded(true);
+            rsEvent.setIsTraded(1);
+            rsEvent.setRank(trade.getRank());
             rsEventRepository.save(rsEvent);
         } else {
             RankDto rank = rankDto.get();
@@ -93,7 +92,8 @@ public class RsService {
                 rank.setRsEventId(rsEventId);
                 rankRepository.save(rank);
                 RsEventDto rsEvent = rsEventDto.get();
-                rsEvent.setIsTraded(true);
+                rsEvent.setIsTraded(1);
+                rsEvent.setRank(trade.getRank());
                 rsEventRepository.save(rsEvent);
                 rsEventRepository.deleteById(oldRsEventId);
             } else {
@@ -103,10 +103,9 @@ public class RsService {
     }
 
     public List<RsEvent> getRsEventList() {
-        List<RsEvent> rsEvents = new ArrayList<>();
         List<RankDto> ranks = rankRepository.findAll();
         if (ranks.size() == 0) {
-            rsEvents =rsEventRepository.findByOrderByVoteNumDesc().stream()
+            return rsEventRepository.findByOrderByVoteNumDesc().stream()
                     .map(
                             item ->
                                     RsEvent.builder()
@@ -116,7 +115,32 @@ public class RsService {
                                             .voteNum(item.getVoteNum())
                                             .build())
                     .collect(Collectors.toList());
+        } else {
+            List<RsEventDto> tradedRsEvents = new ArrayList<>();
+            List<RsEventDto> notTradedRsEvents = new ArrayList<>();
+            List<RsEventDto> rsEventDtos = rsEventRepository.findAll();
+            rsEventDtos.forEach(item -> {
+                if (item.getIsTraded() == 1) {
+                    tradedRsEvents.add(item);
+                } else {
+                    notTradedRsEvents.add(item);
+                }
+            });
+            notTradedRsEvents.sort(Comparator.comparingInt(RsEventDto::getVoteNum));
+            Collections.reverse(notTradedRsEvents);
+            List<RsEventDto> sortedRsEvents = new ArrayList<>(notTradedRsEvents);
+            tradedRsEvents.forEach(item -> {
+                sortedRsEvents.add(item.getRank() - 1, item);
+            });
+            return sortedRsEvents.stream()
+                    .map(item ->
+                            RsEvent.builder()
+                                    .eventName(item.getEventName())
+                                    .keyword(item.getKeyword())
+                                    .userId(item.getId())
+                                    .voteNum(item.getVoteNum())
+                                    .build())
+                    .collect(Collectors.toList());
         }
-        return rsEvents;
     }
 }
