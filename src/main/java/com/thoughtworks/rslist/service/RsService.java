@@ -92,6 +92,8 @@ public class RsService {
                 rsEvent.setIsTraded(true);
                 rsEventRepository.save(rsEvent);
                 rsEventRepository.deleteById(oldRsEventId);
+            }else {
+                throw new  Exception("trade amount is not enough");
             }
         }
     }

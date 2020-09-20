@@ -23,8 +23,7 @@ import static org.hamcrest.Matchers.hasKey;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -111,9 +110,32 @@ class RsControllerTest {
         int rsEventSize = rsEventRepository.findAll().size();
         int tradeRecordSize = tradeRecordRepository.findAll().size();
         int amount = rankRepository.findByRankPoint(1).get().getAmount();
+        Optional<RsEventDto> rsEvent1 = rsEventRepository.findById(rsEventDto1.getId());
         assertEquals(2, rsEventSize);
         assertEquals(1, tradeRecordSize);
         assertEquals(3, amount);
+        assertFalse(rsEvent1.isPresent());
+    }
+
+    @Test
+    void shouldReturnBadRequestWhenTradeAmountIsNotEnough() throws Exception {
+        UserDto save = userRepository.save(userDto);
+        RsEventDto rsEventDto1 =
+                RsEventDto.builder().keyword("无分类").eventName("第一条事件").user(save).build();
+        RsEventDto rsEventDto2 =
+                RsEventDto.builder().keyword("无分类").eventName("第二条事件").user(save).build();
+        RsEventDto rsEventDto3 =
+                RsEventDto.builder().keyword("无分类").eventName("第三条事件").user(save).build();
+        rsEventRepository.save(rsEventDto1);
+        rsEventRepository.save(rsEventDto2);
+        rsEventRepository.save(rsEventDto3);
+        RankDto rankDto = RankDto.builder().rankPoint(1).amount(2).rsEventId(rsEventDto1.getId()).build();
+        rankRepository.save(rankDto);
+        Trade trade = new Trade(1, 1);
+        mockMvc.perform(post("/rs/buy/{rsEventId}", rsEventDto2.getId())
+                .content(new ObjectMapper().writeValueAsString(trade))
+                .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isBadRequest());
     }
 
     @Test
