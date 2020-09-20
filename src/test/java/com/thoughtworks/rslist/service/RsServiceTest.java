@@ -2,9 +2,7 @@ package com.thoughtworks.rslist.service;
 
 import com.thoughtworks.rslist.domain.Trade;
 import com.thoughtworks.rslist.domain.Vote;
-import com.thoughtworks.rslist.dto.RsEventDto;
-import com.thoughtworks.rslist.dto.UserDto;
-import com.thoughtworks.rslist.dto.VoteDto;
+import com.thoughtworks.rslist.dto.*;
 import com.thoughtworks.rslist.repository.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -15,8 +13,7 @@ import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.anyInt;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 import static org.mockito.MockitoAnnotations.initMocks;
 
 class RsServiceTest {
@@ -97,7 +94,7 @@ class RsServiceTest {
     }
 
     @Test
-    void shouldThrowExceptionWhenRsEventNotExist(){
+    void shouldThrowExceptionWhenRsEventNotExist() {
         Trade trade = new Trade(2, 1);
         when(rsEventRepository.findById(anyInt())).thenReturn(Optional.empty());
         assertThrows(
@@ -105,5 +102,26 @@ class RsServiceTest {
                 () -> {
                     rsService.buy(trade, 5);
                 });
+    }
+
+    @Test
+    void BuyRankIfRankIsNotTraded() throws Exception {
+        UserDto userDto =
+                UserDto.builder().voteNum(5).phone("18888888888").gender("female").email("a@b.com")
+                        .age(19).userName("xiaoli").id(2).build();
+        RsEventDto rsEventDto =
+                RsEventDto.builder().keyword("无分类").eventName("第一条事件").user(userDto).build();
+        Trade trade = new Trade(2, 1);
+        when(rsEventRepository.findById(anyInt())).thenReturn(Optional.of(rsEventDto));
+        when(rankRepository.findByRankPoint(anyInt())).thenReturn(Optional.empty());
+        rsService.buy(trade,rsEventDto.getId());
+        verify(rankRepository).save(any());
+        verify(tradeRecordRepository).save(TradeRecordDto.builder()
+                .amount(trade.getAmount())
+                .rankPoint(trade.getRank())
+                .rsEventId(rsEventDto.getId()).build());
+        rsEventDto.setRank(trade.getRank());
+        rsEventDto.setIsTraded(1);
+        verify(rsEventRepository).save(rsEventDto);
     }
 }
