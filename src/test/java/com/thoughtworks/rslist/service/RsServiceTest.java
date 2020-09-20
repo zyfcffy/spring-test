@@ -124,4 +124,23 @@ class RsServiceTest {
         rsEventDto.setIsTraded(1);
         verify(rsEventRepository).save(rsEventDto);
     }
+
+    @Test
+    void shouldBuyRankSuccessWhenTradeAmountIsEnough() throws Exception {
+        RsEventDto rsEventDto =
+                RsEventDto.builder().keyword("无分类").eventName("第一条事件").build();
+        Trade trade = new Trade(3, 1);
+        int rsEventId = 6;
+        RankDto rankDto = RankDto.builder().rankPoint(1).amount(1).rsEventId(1).build();
+        when(rsEventRepository.findById(anyInt())).thenReturn(Optional.of(rsEventDto));
+        when(rankRepository.findByRankPoint(anyInt())).thenReturn(Optional.of(rankDto));
+        rsService.buy(trade,rsEventId);
+        TradeRecordDto tradeRecordDto = TradeRecordDto.builder()
+                .amount(trade.getAmount())
+                .rankPoint(trade.getRank())
+                .rsEventId(rsEventId).build();
+        verify(tradeRecordRepository).save(tradeRecordDto);
+        verify(rankRepository).save(rankDto);
+        verify(rsEventRepository).save(rsEventDto);
+    }
 }
