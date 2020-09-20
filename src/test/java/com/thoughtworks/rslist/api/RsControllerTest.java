@@ -64,13 +64,13 @@ class RsControllerTest {
     }
 
     @Test
-    public void shouldByRankIfRankIsNotBought() throws Exception {
+    public void shouldBuyRankIfRankIsNotTraded() throws Exception {
         UserDto save = userRepository.save(userDto);
         RsEventDto rsEventDto =
                 RsEventDto.builder().keyword("无分类").eventName("第一条事件").user(save).build();
         rsEventRepository.save(rsEventDto);
         Trade trade = new Trade(2, 1);
-        mockMvc.perform(post("/rs/buy/{rsEventId}",rsEventDto.getId())
+        mockMvc.perform(post("/rs/buy/{rsEventId}", rsEventDto.getId())
                 .content(new ObjectMapper().writeValueAsString(trade))
                 .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk());
@@ -78,6 +78,15 @@ class RsControllerTest {
         RsEventDto rsEvent = rsEventRepository.findById(rsEventDto.getId()).get();
         assertEquals(1, tradeRecordSize);
         assertEquals(true, rsEvent.getIsTraded());
+    }
+
+    @Test
+    public void shouldReturnBadRequestWhenRsEventNotExist() throws Exception {
+        Trade trade = new Trade(2, 1);
+        mockMvc.perform(post("/rs/buy/5")
+                .content(new ObjectMapper().writeValueAsString(trade))
+                .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isBadRequest());
     }
 
     @Test

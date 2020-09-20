@@ -55,8 +55,11 @@ public class RsService {
   }
 
   @Transactional
-  public void buy(Trade trade, int rsEventId) {
+  public void buy(Trade trade, int rsEventId) throws Exception {
     Optional<RsEventDto> rsEventDto = rsEventRepository.findById(rsEventId);
+    if(!rsEventDto.isPresent()){
+      throw new  Exception("rs event not exist");
+    }
     int rankPoint = trade.getRank();
     Optional<RankDto> rankDto = rankRepository.findByRankPoint(rankPoint);
     if(!rankDto.isPresent()){
