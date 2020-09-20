@@ -2,14 +2,11 @@ package com.thoughtworks.rslist.service;
 
 import com.thoughtworks.rslist.domain.Trade;
 import com.thoughtworks.rslist.domain.Vote;
-import com.thoughtworks.rslist.dto.RsEventDto;
-import com.thoughtworks.rslist.dto.UserDto;
-import com.thoughtworks.rslist.dto.VoteDto;
-import com.thoughtworks.rslist.repository.RsEventRepository;
-import com.thoughtworks.rslist.repository.UserRepository;
-import com.thoughtworks.rslist.repository.VoteRepository;
+import com.thoughtworks.rslist.dto.*;
+import com.thoughtworks.rslist.repository.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Optional;
 
@@ -18,11 +15,19 @@ public class RsService {
   final RsEventRepository rsEventRepository;
   final UserRepository userRepository;
   final VoteRepository voteRepository;
+  final TradeRecordRepository tradeRecordRepository;
+  final RankRepository rankRepository;
 
-  public RsService(RsEventRepository rsEventRepository, UserRepository userRepository, VoteRepository voteRepository) {
+  public RsService(RsEventRepository rsEventRepository,
+                   UserRepository userRepository,
+                   VoteRepository voteRepository,
+                   TradeRecordRepository tradeRecordRepository,
+                   RankRepository rankRepository) {
     this.rsEventRepository = rsEventRepository;
     this.userRepository = userRepository;
     this.voteRepository = voteRepository;
+    this.tradeRecordRepository = tradeRecordRepository;
+    this.rankRepository = rankRepository;
   }
 
   public void vote(Vote vote, int rsEventId) {
@@ -49,7 +54,25 @@ public class RsService {
     rsEventRepository.save(rsEvent);
   }
 
-  public void buy(Trade trade, int id) {
-
+  @Transactional
+  public void buy(Trade trade, int rsEventId) {
+    Optional<RsEventDto> rsEventDto = rsEventRepository.findById(rsEventId);
+    int rankPoint = trade.getRank();
+    Optional<RankDto> rankDto = rankRepository.findByRankPoint(rankPoint);
+    if(!rankDto.isPresent()){
+      RankDto newRankDto =RankDto.builder()
+              .amount(trade.getAmount())
+              .rankPoint(rankPoint)
+              .rsEventId(rsEventId).build();
+      rankRepository.save(newRankDto);
+      TradeRecordDto tradeRecordDto =TradeRecordDto.builder()
+              .amount(trade.getAmount())
+              .rankPoint(rankPoint)
+              .rsEventId(rsEventId).build();
+      tradeRecordRepository.save(tradeRecordDto);
+      RsEventDto rsEvent = rsEventDto.get();
+      rsEvent.setIsTraded(true);
+      rsEventRepository.save(rsEvent);
+    }
   }
 }
